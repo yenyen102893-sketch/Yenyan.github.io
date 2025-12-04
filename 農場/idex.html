@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR農場遊戲</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            height: 100vh;
+            background: linear-gradient(to bottom, #87CEEB, #90EE90);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 上方玩家資訊 */
+        .player-info {
+            background: linear-gradient(to right, #f59e0b, #fb923c);
+            color: white;
+            padding: 1rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .player-info-content {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .player-avatar {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .avatar-circle {
+            width: 50px;
+            height: 50px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .player-details h2 {
+            font-size: 1.2rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .player-details .level-info {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .coins-display {
+            background: #fbbf24;
+            color: #78350f;
+            padding: 0.5rem 1rem;
+            border-radius: 999px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* 主要遊戲區域 */
+        .game-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .game-content {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .content-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+            display: none;
+        }
+
+        .content-panel.active {
+            display: block;
+        }
+
+        .panel-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* AR農場視圖 */
+        .ar-view {
+            background: linear-gradient(to bottom, #dcfce7, #bbf7d0);
+            border-radius: 0.75rem;
+            padding: 2rem;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 4px solid #86efac;
+        }
+
+        .ar-view p {
+            color: #4b5563;
+            margin-bottom: 1rem;
+        }
+
+        .animals-grid {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .animal-item {
+            text-align: center;
+            position: relative;
+        }
+
+        .animal-emoji {
+            font-size: 4rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+            position: relative;
+        }
+
+        .animal-emoji:hover {
+            transform: scale(1.1);
+        }
+
+        .animal-clothes {
+            position: absolute;
+            font-size: 2rem;
+            pointer-events: none;
+        }
+
+        .animal-name {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #166534;
+            margin-top: 0.5rem;
+        }
+
+        .feed-btn {
+            margin-top: 0.5rem;
+            background: #22c55e;
+            color: white;
+            border: none;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+
+        .feed-btn:hover {
+            background: #16a34a;
+        }
+
+        /* 食物網格 */
+        .food-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .food-item {
+            background: linear-gradient(to bottom right, #fed7aa, #fef3c7);
+            border: 2px solid #fdba74;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .food-icon {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .food-name {
+            font-weight: bold;
+            color: #78350f;
+        }
+
+        .food-count {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ea580c;
+            margin-top: 0.5rem;
+        }
+
+        /* 倉庫物品 */
+        .warehouse-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .warehouse-item {
+            background: linear-gradient(to right, #e9d5ff, #fbcfe8);
+            border: 2px solid #c084fc;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .warehouse-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .warehouse-icon {
+            font-size: 2.5rem;
+        }
+
+        .warehouse-name {
+            font-weight: bold;
+            color: #581c87;
+        }
+
+        .warehouse-details {
+            font-size: 0.875rem;
+            color: #7c3aed;
+        }
+
+        .sell-btn {
+            background: #eab308;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 999px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .sell-btn:hover {
+            background: #ca8a04;
+        }
+
+        .sell-btn:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+        }
+
+        /* 動物網格 */
+        .animals-storage-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .animal-storage-item {
+            background: linear-gradient(to bottom right, #dbeafe, #cffafe);
+            border: 2px solid #60a5fa;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            text-align: center;
+            transition: box-shadow 0.2s;
+        }
+
+        .animal-storage-item:hover {
+            box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+        }
+
+        .animal-storage-emoji {
+            font-size: 4rem;
+            margin-bottom: 0.5rem;
+            position: relative;
+            display: inline-block;
+        }
+
+        .animal-storage-name {
+            font-weight: bold;
+            color: #1e3a8a;
+            font-size: 1.1rem;
+        }
+
+        .animal-status {
+            font-size: 0.875rem;
+            color: #2563eb;
+            margin-top: 0.5rem;
+        }
+
+        .clothes-selector {
+            margin-top: 0.75rem;
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .clothes-btn {
+            font-size: 1.5rem;
+            background: white;
+            border: 2px solid #60a5fa;
+            border-radius: 0.5rem;
+            padding: 0.25rem 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .clothes-btn:hover {
+            transform: scale(1.1);
+            background: #dbeafe;
+        }
+
+        .clothes-btn.active {
+            background: #3b82f6;
+            border-color: #1e40af;
+        }
+
+        /* 商店 */
+        .shop-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .shop-item {
+            background: linear-gradient(to bottom right, #fef3c7, #fde68a);
+            border: 3px solid #fbbf24;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .shop-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+        }
+
+        .shop-icon {
+            font-size: 4rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .shop-name {
+            font-weight: bold;
+            color: #78350f;
+            font-size: 1.1rem;
+        }
+
+        .shop-price {
+            font-size: 1.25rem;
+            color: #ea580c;
+            margin: 0.5rem 0;
+            font-weight: bold;
+        }
+
+        .buy-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 0.5rem 1.5rem;
+            border-radius: 999px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+
+        .buy-btn:hover {
+            background: #059669;
+        }
+
+        .buy-btn:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+        }
+
+        /* 下方工具列 */
+        .toolbar {
+            background: white;
+            box-shadow: 0 -4px 6px rgba(0,0,0,0.1);
+            border-top: 4px solid #86efac;
+        }
+
+        .toolbar-content {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-around;
+            padding: 0.5rem;
+        }
+
+        .toolbar-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            border: none;
+            background: transparent;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+        }
+
+        .toolbar-btn:hover {
+            background: #f3f4f6;
+        }
+
+        .toolbar-btn.active {
+            background: #22c55e;
+            color: white;
+            transform: scale(1.05);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .toolbar-btn.active.food {
+            background: #f97316;
+        }
+
+        .toolbar-btn.active.warehouse {
+            background: #a855f7;
+        }
+
+        .toolbar-btn.active.animals {
+            background: #3b82f6;
+        }
+
+        .toolbar-btn.active.shop {
+            background: #eab308;
+        }
+
+        .toolbar-icon {
+            width: 24px;
+            height: 24px;
+        }
+
+        .toolbar-label {
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .notification {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: #22c55e;
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: none;
+            animation: slideIn 0.3s ease-out;
+            z-index: 1000;
+        }
+
+        .notification.show {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* 彈出視窗 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 1rem;
+            padding: 2rem;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 25px rgba(0,0,0,0.3);
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #166534;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .food-selection {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .food-option {
+            background: linear-gradient(to bottom, #fef3c7, #fde68a);
+            border: 2px solid #d1d5db;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .food-option:hover {
+            transform: scale(1.05);
+        }
+
+        .food-option.selected {
+            border-color: #10b981;
+            background: linear-gradient(to bottom, #d1fae5, #a7f3d0);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+        }
+
+        .food-option.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .food-option-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .food-option-count {
+            font-size: 0.875rem;
+            color: #6b7280;
+            font-weight: bold;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .modal-btn.confirm {
+            background: #10b981;
+            color: white;
+        }
+
+        .modal-btn.confirm:hover {
+            background: #059669;
+        }
+
+        .modal-btn.cancel {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .modal-btn.cancel:hover {
+            background: #d1d5db;
+        }
+    </style>
+</head>
+<body>
+    <!-- 上方玩家資訊 -->
+    <div class="player-info">
+        <div class="player-info-content">
+            <div class="player-avatar">
+                <div class="avatar-circle">👨‍🌾</div>
+                <div class="player-details">
+                    <h2>農場主人</h2>
+                    <div class="level-info">等級 <span id="level">1</span> | 經驗值 <span id="exp">0</span>/<span id="maxExp">100</span></div>
+                </div>
+            </div>
+            <div class="coins-display">
+                🪙 <span id="coins">100</span> 金幣
+            </div>
+        </div>
+    </div>
+
+    <!-- 主要遊戲區域 -->
+    <div class="game-area">
+        <div class="game-content">
+            <!-- 農場面板 -->
+            <div id="farm-panel" class="content-panel active">
+                <h3 class="panel-title" style="color: #166534;">📷 AR農場視圖</h3>
+                <div class="ar-view">
+                    <p>啟動相機掃描地面放置動物</p>
+                    <div class="animals-grid" id="farm-animals"></div>
+                </div>
+            </div>
+
+            <!-- 食物面板 -->
+            <div id="food-panel" class="content-panel">
+                <h3 class="panel-title" style="color: #9a3412;">🍎 食物倉庫</h3>
+                <div class="food-grid" id="food-grid"></div>
+            </div>
+
+            <!-- 倉庫面板 -->
+            <div id="warehouse-panel" class="content-panel">
+                <h3 class="panel-title" style="color: #581c87;">📦 寶物倉庫</h3>
+                <div class="warehouse-list" id="warehouse-list"></div>
+            </div>
+
+            <!-- 動物面板 -->
+            <div id="animals-panel" class="content-panel">
+                <h3 class="panel-title" style="color: #1e3a8a;">🏠 動物存放區</h3>
+                <div class="animals-storage-grid" id="animals-storage"></div>
+            </div>
+
+            <!-- 商店面板 -->
+            <div id="shop-panel" class="content-panel">
+                <h3 class="panel-title" style="color: #78350f;">🏪 商店</h3>
+                <div class="shop-grid" id="shop-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 下方工具列 -->
+    <div class="toolbar">
+        <div class="toolbar-content">
+            <button class="toolbar-btn active" onclick="switchTab('farm')">
+                <svg class="toolbar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                <span class="toolbar-label">農場</span>
+            </button>
+            <button class="toolbar-btn" onclick="switchTab('food')">
+                <svg class="toolbar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15.546c-.523 0-1.046.151-1.5.454a2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.701 2.701 0 00-1.5-.454M9 6v2m3-2v2m3-2v2M9 3h.01M12 3h.01M15 3h.01M21 21v-7a2 2 0 00-2-2H5a2 2 0 00-2 2v7h18zm-3-9v-2a2 2 0 00-2-2H8a2 2 0 00-2 2v2h12z"></path>
+                </svg>
+                <span class="toolbar-label">食物</span>
+            </button>
+            <button class="toolbar-btn" onclick="switchTab('warehouse')">
+                <svg class="toolbar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                </svg>
+                <span class="toolbar-label">倉庫</span>
+            </button>
+            <button class="toolbar-btn" onclick="switchTab('animals')">
+                <svg class="toolbar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                </svg>
+                <span class="toolbar-label">動物</span>
+            </button>
+            <button class="toolbar-btn" onclick="switchTab('shop')">
+                <svg class="toolbar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+                <span class="toolbar-label">商店</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 餵食選擇彈出視窗 -->
+    <div class="modal" id="feedModal">
+        <div class="modal-content">
+            <h3 class="modal-title">選擇食物餵食 <span id="selectedAnimalName"></span></h3>
+            <div class="food-selection" id="foodSelection"></div>
+            <div class="modal-buttons">
+                <button class="modal-btn cancel" onclick="closeFeedModal()">取消</button>
+                <button class="modal-btn confirm" onclick="confirmFeed()">餵食</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // 遊戲數據
+        let gameData = {
+            coins: 100,
+            level: 1,
+            exp: 0,
+            animals: [
+                { id: 1, name: '羊駝', emoji: '🦙', clothes: null },
+                { id: 2, name: '小雞', emoji: '🐔', clothes: null },
+                { id: 3, name: '兔子', emoji: '🐰', clothes: null },
+                { id: 4, name: '水豚', emoji: '🦫', clothes: null },
+                { id: 5, name: '狐獴', emoji: '🦦', clothes: null },
+                { id: 6, name: '天竺鼠', emoji: '🐹', clothes: null }
+            ],
+            foods: [
+                { id: 1, name: '蘋果', icon: '🍎', count: 5, price: 10 },
+                { id: 2, name: '玉米', icon: '🌽', count: 3, price: 15 },
+                { id: 3, name: '草', icon: '🌾', count: 8, price: 5 },
+                { id: 4, name: '胡蘿蔔', icon: '🥕', count: 0, price: 12 },
+                { id: 5, name: '魚', icon: '🐟', count: 0, price: 20 }
+            ],
+            warehouse: [
+                { id: 1, type: '寶石', icon: '💎', count: 2, value: 50 },
+                { id: 2, type: '金色大便', icon: '💩', count: 5, value: 10 }
+            ],
+            clothes: [
+                { id: 1, icon: '🎩', name: '紳士帽' },
+                { id: 2, icon: '👑', name: '皇冠' },
+                { id: 3, icon: '🎀', name: '蝴蝶結' },
+                { id: 4, icon: '🕶️', name: '太陽眼鏡' },
+                { id: 5, icon: '🎓', name: '學士帽' }
+            ],
+            selectedAnimalId: null,
+            selectedFoodId: null
+        };
+
+        // 初始化遊戲
+        function init() {
+            updateUI();
+            renderFarmAnimals();
+            renderFoods();
+            renderWarehouse();
+            renderAnimalsStorage();
+            renderShop();
+        }
+
+        // 更新UI
+        function updateUI() {
+            document.getElementById('coins').textContent = gameData.coins;
+            document.getElementById('level').textContent = gameData.level;
+            document.getElementById('exp').textContent = gameData.exp;
+            document.getElementById('maxExp').textContent = gameData.level * 100;
+        }
+
+        // 渲染農場動物
+        function renderFarmAnimals() {
+            const container = document.getElementById('farm-animals');
+            container.innerHTML = gameData.animals.map(animal => `
+                <div class="animal-item">
+                    <div class="animal-emoji">
+                        ${animal.emoji}
+                        ${animal.clothes ? `<span class="animal-clothes" style="top: -10px; left: 50%; transform: translateX(-50%);">${animal.clothes}</span>` : ''}
+                    </div>
+                    <div class="animal-name">${animal.name}</div>
+                    <button class="feed-btn" onclick="openFeedModal(${animal.id}, '${animal.name}')">餵食</button>
+                </div>
+            `).join('');
+        }
+
+        // 渲染食物
+        function renderFoods() {
+            const container = document.getElementById('food-grid');
+            container.innerHTML = gameData.foods.map(food => `
+                <div class="food-item">
+                    <div class="food-icon">${food.icon}</div>
+                    <div class="food-name">${food.name}</div>
+                    <div class="food-count">${food.count}</div>
+                </div>
+            `).join('');
+        }
+
+        // 渲染倉庫
+        function renderWarehouse() {
+            const container = document.getElementById('warehouse-list');
+            container.innerHTML = gameData.warehouse.map(item => `
+                <div class="warehouse-item">
+                    <div class="warehouse-info">
+                        <div class="warehouse-icon">${item.icon}</div>
+                        <div>
+                            <div class="warehouse-name">${item.type}</div>
+                            <div class="warehouse-details">數量: ${item.count} | 單價: ${item.value} 金幣</div>
+                        </div>
+                    </div>
+                    <button class="sell-btn" onclick="sellItem(${item.id})" ${item.count === 0 ? 'disabled' : ''}>
+                        出售
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // 渲染動物存放區
+        function renderAnimalsStorage() {
+            const container = document.getElementById('animals-storage');
+            container.innerHTML = gameData.animals.map(animal => `
+                <div class="animal-storage-item">
+                    <div class="animal-storage-emoji">
+                        ${animal.emoji}
+                        ${animal.clothes ? `<span class="animal-clothes" style="top: -10px; left: 50%; transform: translateX(-50%);">${animal.clothes}</span>` : ''}
+                    </div>
+                    <div class="animal-storage-name">${animal.name}</div>
+                    <div class="animal-status">健康狀態: 良好</div>
+                    <div class="clothes-selector">
+                        ${gameData.clothes.map(cloth => `
+                            <button class="clothes-btn ${animal.clothes === cloth.icon ? 'active' : ''}" 
+                                    onclick="equipClothes(${animal.id}, '${cloth.icon}')" 
+                                    title="${cloth.name}">
+                                ${cloth.icon}
+                            </button>
+                        `).join('')}
+                        <button class="clothes-btn" onclick="equipClothes(${animal.id}, null)" title="脫掉">❌</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 渲染商店
+        function renderShop() {
+            const container = document.getElementById('shop-grid');
+            container.innerHTML = gameData.foods.map(food => `
+                <div class="shop-item">
+                    <div class="shop-icon">${food.icon}</div>
+                    <div class="shop-name">${food.name}</div>
+                    <div class="shop-price">🪙 ${food.price}</div>
+                    <button class="buy-btn" onclick="buyFood(${food.id})" ${gameData.coins < food.price ? 'disabled' : ''}>
+                        購買
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // 購買食物
+        function buyFood(foodId) {
+            const food = gameData.foods.find(f => f.id === foodId);
+            if (food && gameData.coins >= food.price) {
+                gameData.coins -= food.price;
+                food.count++;
+                showNotification(`成功購買 ${food.icon} ${food.name}!`);
+                updateUI();
+                renderFoods();
+                renderShop();
+            } else {
+                showNotification('金幣不足!');
+            }
+        }
+
+        // 打開餵食選擇視窗
+        function openFeedModal(animalId, animalName) {
+            gameData.selectedAnimalId = animalId;
+            gameData.selectedFoodId = null;
+            document.getElementById('selectedAnimalName').textContent = animalName;
+            
+            const container = document.getElementById('foodSelection');
+            container.innerHTML = gameData.foods.map(food => `
+                <div class="food-option ${food.count === 0 ? 'disabled' : ''} ${gameData.selectedFoodId === food.id ? 'selected' : ''}" 
+                     onclick="selectFood(${food.id}, ${food.count})">
+                    <div class="food-option-icon">${food.icon}</div>
+                    <div class="food-option-count">×${food.count}</div>
+                </div>
+            `).join('');
+            
+            document.getElementById('feedModal').classList.add('show');
+        }
+
+        // 選擇食物
+        function selectFood(foodId, count) {
+            if (count > 0) {
+                gameData.selectedFoodId = foodId;
+                document.querySelectorAll('.food-option').forEach(el => el.classList.remove('selected'));
+                event.currentTarget.classList.add('selected');
+            }
+        }
+
+        // 關閉餵食視窗
+        function closeFeedModal() {
+            document.getElementById('feedModal').classList.remove('show');
+        }
+
+        // 確認餵食
+        function confirmFeed() {
+            if (!gameData.selectedFoodId) {
+                showNotification('請選擇食物!');
+                return;
+            }
+
+            const food = gameData.foods.find(f => f.id === gameData.selectedFoodId);
+            if (food && food.count > 0) {
+                food.count--;
+                
+                // 隨機產生寶石或大便
+                const randomItem = Math.random() > 0.5 ? 0 : 1;
+                gameData.warehouse[randomItem].count++;
+                
+                showNotification(`餵食成功!獲得了${gameData.warehouse[randomItem].icon}`);
+                
+                gameData.exp += 5;
+                if (gameData.exp >= gameData.level * 100) {
+                    gameData.level++;
+                    gameData.exp = 0;
+                    showNotification('🎉 恭喜升級!');
+                }
+                
+                updateUI();
+                renderFoods();
+                renderWarehouse();
+                closeFeedModal();
+            }
+        }
+
+        // 穿戴衣服
+        function equipClothes(animalId, clothesIcon) {
+            const animal = gameData.animals.find(a => a.id === animalId);
+            if (animal) {
+                animal.clothes = clothesIcon;
+                renderFarmAnimals();
+                renderAnimalsStorage();
+                if (clothesIcon) {
+                    showNotification('成功穿戴衣服!');
+                } else {
+                    showNotification('已脫掉衣服!');
+                }
+            }
+        }
+
+        // 出售物品
+        function sellItem(itemId) {
+            const item = gameData.warehouse.find(i => i.id === itemId);
+            if (item && item.count > 0) {
+                gameData.coins += item.value;
+                item.count--;
+                gameData.exp += 5;
+                
+                // 升級檢查
+                if (gameData.exp >= gameData.level * 100) {
+                    gameData.level++;
+                    gameData.exp = 0;
+                    showNotification('🎉 恭喜升級!');
+                }
+                
+                showNotification(`出售成功!獲得${item.value}金幣`);
+                
+                updateUI();
+                renderWarehouse();
+                renderShop();
+            }
+        }
+
+        // 切換頁籤
+        function switchTab(tab) {
+            // 隱藏所有面板
+            document.querySelectorAll('.content-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            
+            // 移除所有按鈕的active狀態
+            document.querySelectorAll('.toolbar-btn').forEach(btn => {
+                btn.classList.remove('active', 'food', 'warehouse', 'animals', 'shop');
+            });
+            
+            // 顯示選中的面板
+            document.getElementById(`${tab}-panel`).classList.add('active');
+            
+            // 添加對應按鈕的active狀態
+            event.currentTarget.classList.add('active');
+            if (tab === 'food') event.currentTarget.classList.add('food');
+            if (tab === 'warehouse') event.currentTarget.classList.add('warehouse');
+            if (tab === 'animals') event.currentTarget.classList.add('animals');
+            if (tab === 'shop') event.currentTarget.classList.add('shop');
+        }
+
+        // 顯示通知
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 2000);
+        }
+
+        // 頁面載入時初始化
+        window.onload = init;
+    </script>
+</body>
+</html>
