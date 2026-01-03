@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>AR Farm Game</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap"
+        rel="stylesheet" />
+    <!-- Material Symbols -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#141414",
+                        "background-light": "#f7f7f7",
+                        "background-dark": "#191919",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        body {
+            min-height: max(884px, 100dvh);
+        }
+
+        /* AR Overlay */
+        #cameraView,
+        #arCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .notification {
+            position: fixed;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s;
+            z-index: 9999;
+        }
+
+        .notification.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body class="bg-neutral-900 font-display overflow-hidden select-none">
+    <!-- Main Container (Game) -->
+    <div class="relative h-screen w-full overflow-hidden bg-neutral-900 group/design-root">
+
+        <!-- AR Camera Layers -->
+        <div class="absolute inset-0 z-0">
+            <!-- Camera Feed -->
+            <video id="cameraView" class="absolute inset-0 w-full h-full object-cover" autoplay playsinline
+                muted></video>
+            <!-- 3D Canvas -->
+            <canvas id="arCanvas" class="absolute inset-0 w-full h-full"></canvas>
+
+            <!-- Fallback Image -->
+            <img id="bg-placeholder" class="h-full w-full object-cover opacity-90 hidden"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAs38QV5ChBKVxvz5C_CtgdDZyiockgHdT9YujS1hDclsk1Dk-_F7ZUDpJ8ZYOhxcBVqvY067b7LJz97IwacGJS0c4Gy37vdZeOJapaKNjnuqm-pt4g6agy2fGL-j7zM2CThQZN0OyASXhzthylAbmRxOGm4olty1NFMWl_wwNx7fajIU0Vy6CZ1nRKH4r6ruOnQjUmnNwW9oJZ3cqduOca6eDjhtHCski0SNRU70ze0DEqpBl8PKZkS17p4x-IAsTQhTzWvZNyd-Bc" />
+        </div>
+
+        <!-- UI Overlay Layer -->
+        <div class="relative z-10 flex h-full flex-col justify-between pointer-events-none">
+            <!-- Top HUD -->
+            <div class="flex items-start justify-between p-4 pointer-events-auto">
+                <!-- Back Button -->
+                <button onclick="window.location.href='game.html'"
+                    class="flex items-center justify-center size-12 rounded-full bg-white/80 backdrop-blur-md shadow-sm border border-white/20 text-primary active:scale-95 transition-transform">
+                    <span class="material-symbols-outlined text-[24px]">arrow_back</span>
+                </button>
+                <!-- Currency and Stats Badge -->
+                <div class="flex gap-3">
+                    <!-- Silver -->
+                    <div
+                        class="flex items-center gap-2 rounded-full bg-white/80 backdrop-blur-md py-2 px-4 shadow-sm border border-white/20">
+                        <span class="material-symbols-outlined text-amber-500 text-[20px]">monetization_on</span>
+                        <span id="silver" class="text-primary text-base font-bold tracking-wide">100</span>
+                    </div>
+                    <!-- Level & EXP -->
+                    <div
+                        class="flex flex-col items-center justify-center rounded-2xl bg-white/80 backdrop-blur-md py-1 px-4 shadow-sm border border-white/20 min-w-[80px]">
+                        <div class="flex items-center gap-1.5">
+                            <span
+                                class="text-[10px] font-extrabold text-primary/40 uppercase tracking-tighter">LV</span>
+                            <span id="level" class="text-primary text-lg font-black leading-none mt-0.5">1</span>
+                        </div>
+                        <div class="w-full bg-black/10 h-1 rounded-full mt-1 overflow-hidden">
+                            <div id="exp-bar" class="bg-green-500 h-full transition-all duration-300" style="width: 0%">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Left Sidebar: Warehouse (Gem, Silver, Gold) -->
+            <div class="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col items-start gap-6 pointer-events-auto">
+                <div class="flex flex-col gap-4 bg-white/60 backdrop-blur-md p-2 rounded-full border border-white/40 shadow-lg"
+                    id="warehouse-rail">
+                    <!-- Silver -->
+                    <div
+                        class="group relative flex flex-col items-center justify-center size-14 rounded-full bg-white/80 text-primary shadow-md">
+                        <span class="material-symbols-outlined text-[24px] text-amber-600">monetization_on</span>
+                        <span id="rail-silver"
+                            class="absolute -bottom-1 bg-amber-600 text-white text-[10px] font-bold px-1.5 rounded-full shadow-sm">100</span>
+                    </div>
+                    <!-- Gold -->
+                    <div
+                        class="group relative flex flex-col items-center justify-center size-14 rounded-full bg-white/80 text-primary shadow-md">
+                        <span class="material-symbols-outlined text-[24px] text-yellow-500">copyright</span>
+                        <span id="rail-gold"
+                            class="absolute -bottom-1 bg-yellow-500 text-white text-[10px] font-bold px-1.5 rounded-full shadow-sm">0</span>
+                    </div>
+                    <!-- Cinnabar/Gem -->
+                    <div
+                        class="group relative flex flex-col items-center justify-center size-14 rounded-full bg-white/80 text-primary shadow-md">
+                        <span class="material-symbols-outlined text-[24px] text-red-500">diamond</span>
+                        <span id="rail-cinnabar"
+                            class="absolute -bottom-1 bg-red-500 text-white text-[10px] font-bold px-1.5 rounded-full shadow-sm">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Sidebar: Food Rail (Generated via JS) -->
+            <div class="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col items-end gap-6 pointer-events-auto">
+                <div id="food-rail"
+                    class="flex flex-col gap-4 bg-white/60 backdrop-blur-md p-2 rounded-full border border-white/40 shadow-lg">
+                    <!-- Foods will be injected here -->
+                </div>
+            </div>
+
+            <!-- Bottom Section: Animal Selection -->
+            <div
+                class="pointer-events-auto w-full flex flex-col items-center gap-4 bg-gradient-to-t from-white/90 via-white/50 to-transparent pb-0 pt-10">
+                <h3 class="text-primary/70 font-bold text-sm bg-white/50 px-3 py-1 rounded-full backdrop-blur-sm -mb-2">
+                    選擇動物</h3>
+                <div class="w-full overflow-x-auto no-scrollbar px-4 pb-6">
+                    <div id="animals-carousel" class="flex items-center justify-center gap-4 min-w-max pb-2">
+                        <!-- Animals injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <!-- Background Music -->
+    <audio id="bgm" loop>
+        <source src="music/nichinichikorekoujitsu.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // --- GAME DATA ---
+        let gameData = {
+            silver: 100, gold: 0, level: 1, exp: 0,
+            selectedAnimal: null, cameraStream: null,
+            foodInventory: { 1: 5, 2: 5, 3: 5 },
+            warehouse: { cinnabar: 0 },
+            animals: [
+                { id: 1, name: '羊駝', image: '2D/alpaca.png', type: 'alpaca', path: 'alpaca/tripo_convert_924f0ca9-790e-40b6-86e1-92258b1c5751' },
+                { id: 2, name: '小雞', image: '2D/chicken.png', type: 'chicken', path: 'chicken/tripo_convert_fe0436e4-4289-48b6-9f9f-2d513eb7c526', eggPath: 'ALL/Cracked Egg/tripo_convert_28a1280f-862a-48b4-88cd-cfade2717c4b', isEgg: true },
+                { id: 3, name: '兔子', image: '2D/bunny.png', type: 'rabbit', path: 'bunny/tripo_convert_1309c936-f2f1-4769-91c2-2ae8c777e960' },
+                { id: 4, name: '水豚', image: '2D/Capybaras.png', type: 'capybara', path: 'Capybaras/tripo_convert_867ca344-e1dc-49e7-8f05-08a23b42fa97', oranges: [] },
+                { id: 5, name: '狐獴', image: '2D/meerkats.png', type: 'meerkat', path: 'meerkats/tripo_convert_9e8dcf78-b5f5-4d2d-b639-b9b1b2eaec66', hasHill: false },
+                { id: 6, name: '天竺鼠', image: '2D/guineapig.png', type: 'guineapig', path: 'guineapig/tripo_convert_fc54a33e-e225-416d-96d7-060ffa86c4ce', carState: 0 }
+            ],
+            foods: [
+                { id: 1, name: '蘋果', icon: 'nutrition', price: 10 },
+                { id: 2, name: '玉米', icon: 'grass', price: 15 },
+                { id: 3, name: '胡蘿蔔', icon: 'local_florist', price: 12 }
+            ],
+            assets: {
+                orange: 'ALL/orange/tripo_convert_e2e6e96c-e65d-4173-8229-0fa696ca3dec',
+                spit: 'ALL/saliva/tripo_convert_7d8bed4d-c702-4809-abf5-0a7900abd4c8',
+                cinnabar: 'ALL/cinnabar/tripo_convert_66062dc9-70a3-494f-9a92-a7f406f499a1',
+                hill: 'ALL/hills/tripo_convert_b717049f-78a2-4c49-a66d-3f6e59c20724',
+                car: 'ALL/car/tripo_convert_2da245fe-1b1a-4fa5-88c0-4decedf8e4b3'
+            },
+            scene: null, renderer: null, camera: null, arObject: null,
+            interactables: [],
+            raycaster: new THREE.Raycaster(),
+            mouse: new THREE.Vector2()
+        };
+
+        // --- UTILS ---
+        function log(msg) { console.log(msg); }
+        function notify(msg) {
+            const el = document.getElementById('notification');
+            if (el) {
+                el.textContent = msg; el.classList.add('show');
+                setTimeout(() => el.classList.remove('show'), 2000);
+            }
+        }
+        function updateUI() {
+            document.getElementById('silver').textContent = gameData.silver;
+
+            // Stats
+            document.getElementById('level').textContent = gameData.level;
+            const expNeeded = gameData.level * 50;
+            const percent = Math.min((gameData.exp / expNeeded) * 100, 100);
+            document.getElementById('exp-bar').style.width = percent + '%';
+
+            // Sidebar
+            document.getElementById('rail-silver').textContent = gameData.silver;
+            document.getElementById('rail-gold').textContent = gameData.gold;
+
+            const rC = document.getElementById('rail-cinnabar');
+            if (rC) {
+                if (gameData.warehouse.cinnabar >= 50) {
+                    rC.innerHTML = `${gameData.warehouse.cinnabar} <button onclick="exchangeCinnabar()" class="absolute -left-16 top-0 bg-yellow-500 text-white text-[10px] px-2 py-1 rounded-full animate-pulse shadow-sm whitespace-nowrap">換金幣</button>`;
+                } else {
+                    rC.textContent = gameData.warehouse.cinnabar;
+                }
+            }
+            renderCarousel();
+            renderFoodRail();
+        }
+
+        function renderCarousel() {
+            const container = document.getElementById('animals-carousel');
+            container.innerHTML = gameData.animals.map(a => {
+                const isSelected = gameData.selectedAnimal && gameData.selectedAnimal.id === a.id;
+                return `
+                <div class="flex flex-col items-center gap-1 cursor-pointer transition-transform ${isSelected ? 'scale-110' : 'hover:scale-105 opacity-70 hover:opacity-100'}" onclick="selectAnimal(${a.id})">
+                    <div class="relative p-1 rounded-full border-2 ${isSelected ? 'border-amber-500 bg-white shadow-xl' : 'border-transparent bg-white/50'}">
+                        <div class="size-14 rounded-full bg-orange-50 flex items-center justify-center overflow-hidden">
+                            <img class="w-full h-full object-contain" src="${a.image}" style="mix-blend-mode: multiply;">
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderFoodRail() {
+            const container = document.getElementById('food-rail');
+            container.innerHTML = gameData.foods.map(f => {
+                const count = gameData.foodInventory[f.id] || 0;
+                return `
+                 <button onclick="feedAnimal(${f.id})"
+                        class="group relative flex flex-col items-center justify-center size-14 rounded-full ${count > 0 ? 'bg-white/80 text-primary hover:bg-amber-100' : 'bg-gray-200 text-gray-400'} shadow-md transition-all hover:scale-105 active:scale-95">
+                        <span class="material-symbols-outlined text-[24px]">${f.icon}</span>
+                        <span class="absolute -bottom-1 ${count > 0 ? 'bg-amber-500 text-white' : 'bg-gray-400 text-white'} text-[10px] font-bold px-1.5 rounded-full shadow-sm">${count}</span>
+                </button>`;
+            }).join('');
+        }
+
+        // --- ACTIONS ---
+        function selectAnimal(id) {
+            if (gameData.scene) {
+                if (gameData.arObject) {
+                    gameData.scene.remove(gameData.arObject);
+                    gameData.arObject = null;
+                }
+                gameData.interactables.forEach(obj => gameData.scene.remove(obj));
+                gameData.interactables = [];
+
+                gameData.animals.forEach(a => {
+                    if (a.type === 'capybara') a.oranges = [];
+                    if (a.type === 'meerkat') a.hasHill = false;
+                    if (a.type === 'guineapig') a.carState = 0;
+                });
+            }
+
+            gameData.selectedAnimal = gameData.animals.find(a => a.id === id);
+            updateUI();
+            notify(`選擇: ${gameData.selectedAnimal.name}`);
+            if (gameData.scene) loadType(gameData.selectedAnimal);
+        }
+
+        function feedAnimal(foodId) {
+            if (!gameData.selectedAnimal) { notify('請先選擇動物!'); return; }
+            const food = gameData.foods.find(f => f.id === foodId);
+            const count = gameData.foodInventory[foodId] || 0;
+
+            if (count > 0) {
+                gameData.foodInventory[foodId]--;
+                gameData.exp += 15;
+                checkLevelUp();
+                updateUI();
+                notify(`餵食 ${food.name}! (EXP +15)`);
+                if (gameData.arObject) {
+                    const obj = gameData.arObject;
+                    let jumpH = 0; const baseY = obj.position.y;
+                    const jump = () => {
+                        jumpH += 0.2; obj.position.y = baseY + Math.sin(jumpH) * 0.5;
+                        if (jumpH < Math.PI) requestAnimationFrame(jump); else obj.position.y = baseY;
+                    };
+                    jump();
+                }
+            } else {
+                if (confirm(`${food.name} 不足! 購買 5 個 (${food.price} 銀幣)?`)) {
+                    if (gameData.silver >= food.price) {
+                        gameData.silver -= food.price;
+                        gameData.foodInventory[foodId] = (gameData.foodInventory[foodId] || 0) + 5;
+                        updateUI();
+                        notify('購買成功!');
+                    } else notify('銀幣不足!');
+                }
+            }
+        }
+
+        function checkLevelUp() {
+            const expNeeded = gameData.level * 50;
+            if (gameData.exp >= expNeeded) {
+                gameData.exp -= expNeeded;
+                gameData.level++;
+                gameData.silver += 50;
+                notify(`🎉 升級! Lv ${gameData.level}`);
+                updateUI();
+            }
+        }
+
+        function exchangeCinnabar() {
+            if (gameData.warehouse.cinnabar >= 50) {
+                gameData.warehouse.cinnabar -= 50;
+                gameData.gold += 1;
+                notify('✨ 兌換 1 金幣');
+                updateUI();
+            }
+        }
+
+        // --- AR & 3D ---
+        async function startCamera() {
+            try {
+                const video = document.getElementById('cameraView');
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                video.srcObject = stream;
+                await video.play();
+                document.getElementById('bg-placeholder').classList.add('hidden');
+
+                const audio = document.getElementById('bgm');
+                audio.play().catch(e => console.log("Audio autoplay block", e));
+
+                initThree();
+            } catch (e) {
+                console.error(e);
+                notify("相機失敗，使用背景圖");
+                document.getElementById('bg-placeholder').classList.remove('hidden');
+                initThree();
+            }
+        }
+
+        function initThree() {
+            if (gameData.scene) return;
+            const canvas = document.getElementById('arCanvas');
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+
+            gameData.scene = new THREE.Scene();
+            gameData.camera = new THREE.PerspectiveCamera(70, w / h, 0.1, 1000);
+
+            gameData.renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+            gameData.renderer.setSize(w, h);
+
+            const light = new THREE.AmbientLight(0xffffff, 1.2);
+            gameData.scene.add(light);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+            dirLight.position.set(0, 5, 5);
+            gameData.scene.add(dirLight);
+
+            // Default Select First
+            selectAnimal(1);
+
+            canvas.addEventListener('click', onCanvasClick);
+            animate();
+        }
+
+        function loadType(animal) {
+            let p = (animal.type === 'chicken' && animal.isEgg) ? animal.eggPath : animal.path;
+            const lastSlash = p.lastIndexOf('/');
+            const dir = p.substring(0, lastSlash);
+            const file = p.substring(lastSlash + 1);
+            const encodedPath = dir.split('/').map(encodeURIComponent).join('/') + '/';
+            const encodedFile = encodeURIComponent(file);
+
+            new THREE.MTLLoader().setPath(encodedPath).load(encodedFile + '.mtl', (materials) => {
+                materials.preload();
+                new THREE.OBJLoader().setMaterials(materials).setPath(encodedPath).load(encodedFile + '.obj', (obj) => {
+                    const wrapper = new THREE.Group();
+                    const box = new THREE.Box3().setFromObject(obj);
+                    const size = box.getSize(new THREE.Vector3());
+                    const center = box.getCenter(new THREE.Vector3());
+                    const maxDim = Math.max(size.x, size.y, size.z);
+                    const scale = 3.0 / (maxDim || 1);
+
+                    obj.scale.set(scale, scale, scale);
+                    obj.position.x = -center.x * scale;
+                    obj.position.y = -center.y * scale;
+                    obj.position.z = -center.z * scale;
+                    obj.rotation.y = -Math.PI / 2;
+
+                    wrapper.add(obj);
+                    wrapper.position.set(0, -0.2, -5);
+                    wrapper.userData.animal = animal;
+                    wrapper.userData.originalObj = obj;
+
+                    gameData.scene.add(wrapper);
+                    gameData.arObject = wrapper;
+                });
+            });
+        }
+
+        function loadItem(key, cb) {
+            const rawPath = gameData.assets[key];
+            const lastSlash = rawPath.lastIndexOf('/');
+            const dir = rawPath.substring(0, lastSlash);
+            const file = rawPath.substring(lastSlash + 1);
+            const encodedPath = dir.split('/').map(encodeURIComponent).join('/') + '/';
+            const encodedFile = encodeURIComponent(file);
+
+            new THREE.MTLLoader().setPath(encodedPath).load(encodedFile + '.mtl', (mat) => {
+                mat.preload();
+                new THREE.OBJLoader().setMaterials(mat).setPath(encodedPath).load(encodedFile + '.obj', cb);
+            });
+        }
+
+        function onCanvasClick(event) {
+            if (event) {
+                event.preventDefault();
+                const canvas = document.getElementById('arCanvas');
+                const rect = canvas.getBoundingClientRect();
+                let clientX = event.clientX || (event.touches ? event.touches[0].clientX : 0);
+                let clientY = event.clientY || (event.touches ? event.touches[0].clientY : 0);
+
+                gameData.mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+                gameData.mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+            }
+
+            if (!gameData.camera || !gameData.scene) return;
+            gameData.raycaster.setFromCamera(gameData.mouse, gameData.camera);
+
+            // Interactables
+            if (gameData.interactables && gameData.interactables.length > 0) {
+                const intersects = gameData.raycaster.intersectObjects(gameData.interactables, true);
+                if (intersects.length > 0) {
+                    let hitObj = intersects[0].object;
+                    while (hitObj.parent && hitObj.parent.type !== 'Scene' && !hitObj.userData.isCollectible) hitObj = hitObj.parent;
+                    if (hitObj.userData.isCollectible) {
+                        gameData.scene.remove(hitObj);
+                        gameData.interactables = gameData.interactables.filter(i => i !== hitObj);
+                        if (hitObj.userData.type === 'cinnabar') {
+                            gameData.warehouse.cinnabar++;
+                            notify('獲得 辰砂!');
+                        }
+                        updateUI();
+                        return;
+                    }
+                }
+            }
+
+            // Animal Interaction
+            if (!gameData.arObject) return;
+            const obj = gameData.arObject;
+            const animal = obj.userData.animal;
+            const type = animal.type;
+
+            // Re-implement specialized interactions (Simplified for brevity but functional)
+            if (type === 'chicken' && animal.isEgg) {
+                gameData.scene.remove(obj);
+                animal.isEgg = false;
+                loadType(animal);
+                notify('小雞孵化!');
+            } else if (type === 'capybara') {
+                if (!animal.oranges) animal.oranges = [];
+                if (animal.oranges.length < 3) {
+                    loadItem('orange', (item) => {
+                        item.position.copy(obj.position);
+                        item.position.y += 1.1 + (animal.oranges.length * 0.45);
+                        item.position.z += 0.8;
+                        item.scale.set(0.6, 0.6, 0.6);
+                        gameData.scene.add(item);
+                        animal.oranges.push(item);
+                        notify('疊橘子!');
+                    });
+                } else {
+                    animal.oranges.forEach(o => gameData.scene.remove(o));
+                    animal.oranges = [];
+                    notify('水豚重置!');
+                }
+            } else if (type === 'rabbit') {
+                const h = new Date().getHours();
+                if (h >= 21 || h <= 4) {
+                    // Poop logic
+                    loadItem('cinnabar', (item) => {
+                        item.position.copy(obj.position);
+                        item.position.x += 2.0;
+                        item.scale.set(0.8, 0.8, 0.8);
+                        item.userData.isCollectible = true;
+                        item.userData.type = 'cinnabar';
+                        gameData.scene.add(item);
+                        gameData.interactables.push(item);
+                        notify('兔子大便了!');
+                    });
+                } else notify('兔子在睡覺 (21:00後再來)');
+            } else if (type === 'guineapig') {
+                if (!animal.carState) {
+                    loadItem('car', (car) => {
+                        car.position.copy(obj.position);
+                        let s = 3.5; car.scale.set(s, s, s);
+                        car.userData.animal = animal;
+                        gameData.scene.remove(obj);
+                        gameData.scene.add(car);
+                        car.rotation.y = -Math.PI / 2;
+                        gameData.arObject = car;
+                        animal.carState = 1;
+                        notify('天竺鼠車車!');
+                    });
+                } else {
+                    gameData.scene.remove(obj);
+                    loadType(animal);
+                    animal.carState = 0;
+                }
+            }
+        }
+
+        function animate() {
+            if (gameData && gameData.renderer) {
+                requestAnimationFrame(animate);
+                gameData.renderer.render(gameData.scene, gameData.camera);
+            }
+        }
+
+        window.onload = function () {
+            updateUI();
+            startCamera(); // Auto start camera on page load
+
+            // Add global tap listener for audio context if needed
+            window.addEventListener('click', () => {
+                const a = document.getElementById('bgm');
+                if (a.paused) a.play();
+            }, { once: true });
+
+            // Touch support
+            const c = document.getElementById('arCanvas');
+            if (c) c.addEventListener('touchstart', onCanvasClick, { passive: false });
+        };
+    </script>
+</body>
+
+</html>

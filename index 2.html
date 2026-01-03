@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的個人網頁</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 50px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+        
+        .profile-section {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .avatar {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            color: white;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1.2em;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+        
+        .bio {
+            color: #666;
+            max-width: 600px;
+            margin: 0 auto 30px;
+            line-height: 1.8;
+        }
+        
+        .section {
+            margin: 40px 0;
+        }
+        
+        .section h2 {
+            font-size: 1.8em;
+            color: #2d3748;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .skills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .skill-tag {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 0.9em;
+            transition: transform 0.3s ease;
+        }
+        
+        .skill-tag:hover {
+            transform: translateY(-3px);
+        }
+        
+        .contact-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .contact-btn {
+            background: white;
+            color: #667eea;
+            padding: 12px 30px;
+            border-radius: 30px;
+            text-decoration: none;
+            border: 2px solid #667eea;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+        
+        .contact-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .projects {
+            display: grid;
+            gap: 20px;
+        }
+        
+        .project-card {
+            background: #f7fafc;
+            padding: 25px;
+            border-radius: 15px;
+            border-left: 4px solid #667eea;
+            transition: transform 0.3s ease;
+        }
+        
+        .project-card:hover {
+            transform: translateX(5px);
+        }
+        
+        .project-card h3 {
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+        
+        .project-card p {
+            color: #666;
+        }
+        
+        @media (max-width: 768px) {
+            .card {
+                padding: 30px 20px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .contact-links {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="profile-section">
+                <div class="avatar">👤</div>
+                <h1>peiting ke</h1>
+                <p class="subtitle">前端工程師 / 設計師 / 創作者</p>
+                <p class="bio">
+                    嗨！我是一位熱愛技術與設計的開發者，專注於創造美觀且實用的網頁應用。
+                    喜歡探索新技術，並將創意想法轉化為實際作品。
+                </p>
+            </div>
+            
+            <div class="section">
+                <h2>🚀 技能</h2>
+                <div class="skills">
+                    <span class="skill-tag">HTML/CSS</span>
+                    <span class="skill-tag">JavaScript</span>
+                    <span class="skill-tag">React</span>
+                    <span class="skill-tag">Python</span>
+                    <span class="skill-tag">UI/UX 設計</span>
+                    <span class="skill-tag">專案管理</span>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>💼 專案作品</h2>
+                <div class="projects">
+                    <div class="project-card">
+                        <h3>專案一</h3>
+                        <p>一個很酷的網頁應用，使用 React 和 Node.js 開發，提供流暢的使用者體驗。</p>
+                    </div>
+                    <div class="project-card">
+                        <h3>專案二</h3>
+                        <p>電商平台設計，整合金流系統與會員管理功能，提升使用者購物體驗。</p>
+                    </div>
+                    <div class="project-card">
+                        <h3>專案三</h3>
+                        <p>資料視覺化儀表板，協助企業快速掌握關鍵數據與洞察。</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>📬 聯絡我</h2>
+                <div class="contact-links">
+                    <a href="mailto:your.email@example.com" class="contact-btn">📧 Email</a>
+                    <a href="https://github.com/yourusername" class="contact-btn">🐙 GitHub</a>
+                    <a href="https://linkedin.com/in/yourusername" class="contact-btn">💼 LinkedIn</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

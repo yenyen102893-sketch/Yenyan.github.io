@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>AR Farm Welcome</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: { "primary": "#141414", "background-light": "#f7f7f7", "background-dark": "#191919", },
+                    fontFamily: { "display": ["Plus Jakarta Sans", "Noto Sans", "sans-serif"] },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Noto+Sans:wght@400;500;700&amp;display=swap"
+        rel="stylesheet" />
+    <!-- Material Symbols -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+
+    <!-- Three.js & Loaders -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/fflate.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FBXLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+
+    <style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .glass-button {
+            background: rgba(20, 20, 20, 0.7);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        body {
+            min-height: max(884px, 100dvh);
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        #cameraView {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 0;
+            background: #000;
+        }
+
+        #arCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .notification {
+            position: fixed;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s;
+            z-index: 9999;
+        }
+
+        .notification.show {
+            opacity: 1;
+        }
+
+        #game-interface {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s;
+        }
+
+        #game-interface.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+    </style>
+</head>
+
+<body
+    class="bg-background-light dark:bg-background-dark font-display antialiased overflow-hidden h-screen w-screen selection:bg-primary selection:text-white">
+
+    <!-- Landing Page -->
+    <div id="landing-page"
+        class="absolute inset-0 z-50 bg-neutral-900 flex flex-col justify-between transition-opacity duration-500">
+        <div class="absolute inset-0 z-0">
+            <img alt="Farm Scene" class="w-full h-full object-cover animate-pulse-slow"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDTzuwfm2WgXUmULve4okE7g5E4U-CKUvurWWHXQki41qUqvHcK3wKs1sW7jpExr_LbhDZmWC6jouJmlwoEXC-a82IBz7iG17EtcaI1X4fet1BzyL2yS4-Uw7Itnt-FNzCaZcchvdPpMWDe3Bw9OzqO2aXdxK9cWoHWr8tHADwbPiyzaocPVNjt2ZZLK4EP9HNA0j5kaafgDvKhB4BhZ3-ZdlqhK7tIWpfY1RbzBl8VDoTfE2n_-TuZgEsU_luJzMG0UJG7gypvJM72" />
+            <div class="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60"></div>
+        </div>
+        <header class="relative z-20 flex items-center justify-between px-6 pt-12 pb-4">
+            <button class="glass-panel flex size-12 items-center justify-center rounded-full text-white"><span
+                    class="material-symbols-outlined">help</span></button>
+            <div class="glass-panel px-3 py-1 rounded-full flex items-center gap-2">
+                <div class="rounded-full bg-green-500 h-2 w-2"></div><span
+                    class="text-white text-xs font-bold uppercase">Online</span>
+            </div>
+            <button class="glass-panel flex size-12 items-center justify-center rounded-full text-white"><span
+                    class="material-symbols-outlined">settings</span></button>
+        </header>
+        <main class="relative z-10 flex flex-1 flex-col items-center justify-end px-6 pb-10 w-full max-w-md mx-auto">
+            <div class="flex flex-col gap-2 text-center mb-10 animate-[bounce_3s_infinite]">
+                <div
+                    class="inline-flex mx-auto items-center justify-center px-4 py-1.5 mb-2 rounded-full bg-primary/80 backdrop-blur-md border border-white/10 shadow-xl">
+                    <span class="material-symbols-outlined text-white text-sm mr-1.5">view_in_ar</span>
+                    <span class="text-white text-xs font-bold uppercase">AR Mode Ready</span>
+                </div>
+                <h1 class="text-white text-5xl font-black drop-shadow-xl">AR Farm</h1>
+                <h2 class="text-white/90 text-2xl font-bold">餵食趣</h2>
+            </div>
+            <div class="w-full flex flex-col gap-4 mb-6">
+                <button onclick="enterGame()"
+                    class="group relative w-full h-16 bg-primary hover:bg-neutral-800 text-white rounded-2xl shadow-2xl flex items-center justify-center overflow-hidden border border-white/10">
+                    <span class="material-symbols-outlined mr-3 text-[28px]">play_circle</span><span
+                        class="text-lg font-bold">開始遊戲</span>
+                </button>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="openProfile()"
+                        class="glass-panel h-12 rounded-xl flex items-center justify-center gap-2 text-white font-bold text-sm"><span
+                            class="material-symbols-outlined">person</span> 玩家資料</button>
+                    <button onclick="openShop()"
+                        class="glass-panel h-12 rounded-xl flex items-center justify-center gap-2 text-white font-bold text-sm"><span
+                            class="material-symbols-outlined">shopping_bag</span> 商店</button>
+                </div>
+            </div>
+            <p class="text-white/60 text-xs text-center font-medium">v1.1.0 © 2024 AR Farm Inc.</p>
+        </main>
+    </div>
+
+    <!-- Profile Modal -->
+    <div id="profile-modal"
+        class="fixed inset-0 z-[60] bg-black/90 backdrop-blur-md flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="w-full max-w-lg bg-[#141414] border border-white/10 rounded-3xl overflow-hidden shadow-2xl transform scale-95 transition-transform duration-300 relative"
+            id="profile-content">
+            <div class="absolute top-[-20%] right-[-10%] w-64 h-64 bg-green-500/20 rounded-full blur-[80px]"></div>
+            <div class="absolute bottom-[-20%] left-[-10%] w-64 h-64 bg-amber-500/10 rounded-full blur-[80px]"></div>
+            <div class="relative p-6 border-b border-white/5 flex justify-between items-center">
+                <h2 class="text-2xl font-black text-white">玩家資料</h2>
+                <button onclick="closeProfile()"
+                    class="size-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-colors"><span
+                        class="material-symbols-outlined">close</span></button>
+            </div>
+            <div class="p-8 flex flex-col items-center gap-6 relative z-10">
+                <div class="relative group">
+                    <div class="size-32 rounded-full p-1 border-2 border-white/20">
+                        <div id="profile-avatar" class="w-full h-full rounded-full bg-cover bg-center overflow-hidden"
+                            style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCgTFrYEvEn2m5Dnm38aRiDbwNbVvXQ1yBDHoayAh1kqQRMpypkSmCwHfZUotWgKv_6z5ZZJ02_jCLzXrCEng3vFQ-xwI8lGc_8oLyd5iIabnDkQj_R8pyr-fsF4jM8pz2I_hOrwx5UKl6PoIVcNyFiE4KQTQoLYFAb5YUIMSUlwq8Efbz1lsWr9XHvXVYYOZfV17h3bpWNCsRTKhnbLxJb-GJz9hlN0wTiDaG4b7vHz7ZT4GKqet1jo4jcdn0ZZWcyYVA7mFOSIiE");'>
+                        </div>
+                    </div>
+                    <label for="avatar-upload"
+                        class="absolute bottom-0 right-0 bg-white text-black p-2 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer">
+                        <span class="material-symbols-outlined text-sm font-bold">edit</span>
+                    </label>
+                    <input type="file" id="avatar-upload" class="hidden" accept="image/*"
+                        onchange="previewAvatar(this)">
+                </div>
+                <div class="text-center w-full space-y-4">
+                    <div>
+                        <h3 class="text-2xl font-bold text-white">Guest #8842</h3>
+                        <div
+                            class="inline-flex items-center gap-1.5 px-3 py-1 mt-2 rounded-full bg-white/5 border border-white/10 text-white/60 text-xs font-bold uppercase tracking-wider">
+                            <span class="material-symbols-outlined text-sm">verified</span> Level 1 Farmer
+                        </div>
+                    </div>
+                    <div class="text-left space-y-2">
+                        <label class="text-white/40 text-xs font-bold uppercase ml-1">顯示名稱</label>
+                        <div class="relative">
+                            <span
+                                class="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 material-symbols-outlined">badge</span>
+                            <input type="text" value="GuestPlayer"
+                                class="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white font-bold focus:ring-2 focus:ring-white/20 focus:border-white/20 outline-none transition-all">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 w-full pt-2">
+                        <div class="bg-white/5 rounded-xl p-3 border border-white/5 text-center">
+                            <div class="text-white/40 text-[10px] uppercase font-bold">總經驗值</div>
+                            <div class="text-white font-black text-xl">1,250</div>
+                        </div>
+                        <div class="bg-white/5 rounded-xl p-3 border border-white/5 text-center">
+                            <div class="text-white/40 text-[10px] uppercase font-bold">成就解鎖</div>
+                            <div class="text-white font-black text-xl">3/20</div>
+                        </div>
+                    </div>
+                    <button onclick="closeProfile()"
+                        class="w-full py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors mt-2">保存變更</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shop Modal -->
+    <div id="shop-modal"
+        class="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="w-11/12 max-w-md bg-[#191919] border border-white/10 rounded-3xl p-6 shadow-2xl transform scale-95 transition-transform duration-300"
+            id="shop-content">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-2xl font-black text-white">農場商店</h2>
+                    <p class="text-white/60 text-xs">購買食物來餵食您的動物</p>
+                </div>
+                <button onclick="closeShop()"
+                    class="size-8 rounded-full bg-white/10 flex items-center justify-center text-white"><span
+                        class="material-symbols-outlined">close</span></button>
+            </div>
+            <div class="flex items-center gap-2 mb-4 bg-white/5 p-3 rounded-xl border border-white/5">
+                <span class="material-symbols-outlined text-amber-500">monetization_on</span>
+                <span id="shop-silver" class="text-white font-bold text-lg">200</span>
+                <span class="text-white/40 text-xs ml-auto">您的銀幣</span>
+            </div>
+            <div id="shop-grid" class="grid grid-cols-3 gap-3 max-h-[50vh] overflow-y-auto no-scrollbar pb-2"></div>
+        </div>
+    </div>
+
+    <!-- Game Interface -->
+    <div id="game-interface" class="absolute inset-0 z-40 w-full h-full">
+        <div class="absolute inset-0 z-0 bg-black">
+            <video id="cameraView" autoplay playsinline muted></video>
+            <canvas id="arCanvas"></canvas>
+        </div>
+        <div class="relative z-30 flex h-full flex-col justify-between pointer-events-none">
+            <div class="flex items-start justify-between p-4 pointer-events-auto">
+                <button onclick="location.reload()"
+                    class="flex items-center justify-center size-12 rounded-full bg-white/80 backdrop-blur-md shadow-sm border border-white/20 text-primary"><span
+                        class="material-symbols-outlined">arrow_back</span></button>
+                <div class="flex gap-3">
+                    <div
+                        class="flex items-center gap-2 rounded-full bg-white/80 backdrop-blur-md py-2 px-4 shadow-sm border border-white/20">
+                        <span class="material-symbols-outlined text-amber-500">monetization_on</span><span id="silver"
+                            class="font-bold">100</span>
+                    </div>
+                    <div class="bg-white/80 backdrop-blur-md rounded-2xl px-4 py-1 min-w-[80px]">
+                        <div class="flex items-center gap-1"><span
+                                class="text-[10px] font-bold text-gray-500">LV</span><span id="level"
+                                class="font-bold">1</span></div>
+                        <div class="w-full bg-gray-200 h-1 rounded-full overflow-hidden">
+                            <div id="exp-bar" class="bg-green-500 h-full w-0"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div
+                class="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-4 bg-white/60 backdrop-blur-md p-2 rounded-full shadow-lg pointer-events-auto">
+                <div class="size-14 bg-white/80 rounded-full flex flex-col items-center justify-center shadow relative">
+                    <span class="material-symbols-outlined text-amber-600">monetization_on</span><span id="rail-silver"
+                        class="absolute -bottom-1 bg-amber-600 text-white text-[10px] px-1.5 rounded-full">100</span>
+                </div>
+                <div class="size-14 bg-white/80 rounded-full flex flex-col items-center justify-center shadow relative">
+                    <span class="material-symbols-outlined text-yellow-500">copyright</span><span id="rail-gold"
+                        class="absolute -bottom-1 bg-yellow-500 text-white text-[10px] px-1.5 rounded-full">0</span>
+                </div>
+                <div class="size-14 bg-white/80 rounded-full flex flex-col items-center justify-center shadow relative">
+                    <span class="material-symbols-outlined text-red-500">diamond</span><span id="rail-cinnabar"
+                        class="absolute -bottom-1 bg-red-500 text-white text-[10px] px-1.5 rounded-full">0</span>
+                </div>
+            </div>
+            <div
+                class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-auto h-[60vh] overflow-y-auto no-scrollbar py-2">
+                <div id="food-rail" class="flex flex-col gap-4 bg-white/60 backdrop-blur-md p-2 rounded-full shadow-lg">
+                </div>
+            </div>
+            <div class="pointer-events-auto w-full bg-gradient-to-t from-white/90 to-transparent pb-6 pt-10 px-4">
+                <div id="animals-carousel" class="flex gap-4 overflow-x-auto no-scrollbar justify-center"></div>
+            </div>
+        </div>
+    </div>
+    <div class="notification" id="notification"></div>
+    <audio id="bgm" loop>
+        <source src="music/nichinichikorekoujitsu.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        let gameData = {
+            silver: 200, gold: 0, level: 1, exp: 0,
+            selectedAnimal: null, foodInventory: {}, warehouse: { cinnabar: 0 },
+            animals: [
+                { id: 1, name: '羊駝', image: '2D/alpaca.png', type: 'alpaca', path: 'alpaca/tripo_convert_924f0ca9-790e-40b6-86e1-92258b1c5751' },
+                { id: 2, name: '小雞', image: '2D/chicken.png', type: 'chicken', path: 'chicken/tripo_convert_fe0436e4-4289-48b6-9f9f-2d513eb7c526', eggPath: 'ALL/Cracked Egg/tripo_convert_28a1280f-862a-48b4-88cd-cfade2717c4b', isEgg: true },
+                { id: 3, name: '兔子', image: '2D/bunny.png', type: 'rabbit', path: 'bunny/tripo_convert_1309c936-f2f1-4769-91c2-2ae8c777e960' },
+                { id: 4, name: '水豚', image: '2D/Capybaras.png', type: 'capybara', path: 'Capybaras/tripo_convert_867ca344-e1dc-49e7-8f05-08a23b42fa97', oranges: [] },
+                { id: 5, name: '狐獴', image: '2D/meerkats.png', type: 'meerkat', path: 'meerkats/tripo_convert_9e8dcf78-b5f5-4d2d-b639-b9b1b2eaec66' },
+                { id: 6, name: '天竺鼠', image: '2D/guineapig.png', type: 'guineapig', path: 'guineapig/tripo_convert_fc54a33e-e225-416d-96d7-060ffa86c4ce', carState: 0 }
+            ],
+            foods: [
+                { id: 4, name: '香蕉', icon: 'lunch_dining', price: 20, model: 'food/banana.fbx', gem: 'Gemstones/yellow.fbx' },
+                { id: 5, name: '芒果', icon: 'eco', price: 25, model: 'food/mango.fbx', gem: 'Gemstones/yellow.fbx' },
+                { id: 6, name: '水蜜桃', icon: 'favorite', price: 30, model: 'food/peach.fbx', gem: 'Gemstones/pink.fbx' },
+                { id: 7, name: '草莓', icon: 'hive', price: 20, model: 'food/strawberry.fbx', gem: 'Gemstones/pink.fbx' },
+                { id: 8, name: '番茄', icon: 'adjust', price: 15, model: 'food/tomato.fbx', gem: 'Gemstones/pink.fbx' },
+                { id: 9, name: '松露', icon: 'cookie', price: 100, model: 'food/truffle.fbx', gem: 'Gemstones/green2.fbx' },
+                { id: 10, name: '藍莓', icon: 'fiber_manual_record', price: 20, model: 'food/blueberry.fbx', gem: 'Gemstones/blue.fbx' },
+                { id: 11, name: '花椰菜', icon: 'cloud', price: 18, model: 'food/cauliflower.fbx', gem: 'Gemstones/green.fbx' },
+                { id: 12, name: '茄子', icon: 'nightlight', price: 18, model: 'food/eggplant.fbx', gem: 'Gemstones/blue.fbx' },
+                { id: 13, name: '萵苣', icon: 'layers', price: 15, model: 'food/lettuce.fbx', gem: 'Gemstones/green.fbx' }
+            ],
+            assets: {
+                orange: 'ALL/orange/tripo_convert_e2e6e96c-e65d-4173-8229-0fa696ca3dec',
+                spit: 'ALL/saliva/tripo_convert_7d8bed4d-c702-4809-abf5-0a7900abd4c8',
+                cinnabar: 'ALL/cinnabar/tripo_convert_66062dc9-70a3-494f-9a92-a7f406f499a1',
+                hill: 'ALL/hills/tripo_convert_b717049f-78a2-4c49-a66d-3f6e59c20724',
+                car: 'ALL/car/tripo_convert_2da245fe-1b1a-4fa5-88c0-4decedf8e4b3'
+            },
+            scene: null, renderer: null, camera: null, arObject: null, interactables: [], fedGems: [],
+            raycaster: new THREE.Raycaster(), mouse: new THREE.Vector2()
+        };
+
+        gameData.foods.forEach(f => gameData.foodInventory[f.id] = 2);
+
+        function enterGame() {
+            document.getElementById('landing-page').classList.add('opacity-0', 'pointer-events-none');
+            document.getElementById('game-interface').classList.add('active');
+            document.getElementById('bgm').play().catch(() => { });
+            startCamera();
+        }
+
+        function notify(msg) {
+            const el = document.getElementById('notification'); el.textContent = msg; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 2000);
+        }
+
+        function openProfile() {
+            document.getElementById('profile-modal').classList.remove('opacity-0', 'pointer-events-none');
+            document.getElementById('profile-content').classList.remove('scale-95');
+            document.getElementById('profile-content').classList.add('scale-100');
+        }
+
+        function closeProfile() {
+            document.getElementById('profile-modal').classList.add('opacity-0', 'pointer-events-none');
+            document.getElementById('profile-content').classList.remove('scale-100');
+            document.getElementById('profile-content').classList.add('scale-95');
+        }
+
+        function openShop() {
+            document.getElementById('shop-modal').classList.remove('opacity-0', 'pointer-events-none');
+            document.getElementById('shop-content').classList.remove('scale-95');
+            document.getElementById('shop-content').classList.add('scale-100');
+            renderShop();
+        }
+
+        function closeShop() {
+            document.getElementById('shop-modal').classList.add('opacity-0', 'pointer-events-none');
+            document.getElementById('shop-content').classList.remove('scale-100');
+            document.getElementById('shop-content').classList.add('scale-95');
+            updateUI();
+        }
+
+        function renderShop() {
+            document.getElementById('shop-silver').textContent = gameData.silver;
+            const grid = document.getElementById('shop-grid');
+            grid.innerHTML = gameData.foods.map(f => {
+                const count = gameData.foodInventory[f.id] || 0;
+                return `
+                <div class="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center gap-2 hover:bg-white/10 transition-colors">
+                    <div class="size-10 rounded-full bg-white/10 flex items-center justify-center text-white">
+                        <span class="material-symbols-outlined">${f.icon}</span>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-white font-bold text-sm">${f.name}</div>
+                        <div class="text-white/50 text-[10px]">庫存: ${count}</div>
+                    </div>
+                    <button onclick="buyShopItem(${f.id})" class="w-full py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1 active:scale-95 transition-transform">
+                        <span class="material-symbols-outlined text-[14px]">monetization_on</span> ${f.price}
+                    </button>
+                </div>`;
+            }).join('');
+        }
+
+        function buyShopItem(id) {
+            const item = gameData.foods.find(f => f.id === id);
+            if (gameData.silver >= item.price) {
+                gameData.silver -= item.price;
+                gameData.foodInventory[id] = (gameData.foodInventory[id] || 0) + 1;
+                gameData.exp += 2;
+                notify(`購買 ${item.name} 成功!`);
+                renderShop();
+            } else {
+                notify('銀幣不足!');
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('silver').textContent = gameData.silver; document.getElementById('level').textContent = gameData.level;
+            document.getElementById('exp-bar').style.width = Math.min((gameData.exp / (gameData.level * 50)) * 100, 100) + '%';
+            document.getElementById('rail-silver').textContent = gameData.silver; document.getElementById('rail-gold').textContent = gameData.gold;
+            const rC = document.getElementById('rail-cinnabar');
+            if (gameData.warehouse.cinnabar >= 50) rC.innerHTML = `${gameData.warehouse.cinnabar} <button onclick="exchangeCinnabar()" class="absolute -left-16 top-0 bg-yellow-500 text-white text-[10px] px-2 py-1 rounded-full whitespace-nowrap">換金幣</button>`;
+            else rC.textContent = gameData.warehouse.cinnabar;
+            renderCarousel(); renderFoodRail();
+        }
+
+        function renderCarousel() {
+            document.getElementById('animals-carousel').innerHTML = gameData.animals.map(a => `
+                <div class="flex flex-col items-center gap-1 cursor-pointer transition-transform ${gameData.selectedAnimal && gameData.selectedAnimal.id === a.id ? 'scale-110' : 'hover:scale-105 opacity-70 hover:opacity-100'}" onclick="selectAnimal(${a.id})">
+                    <div class="relative p-1 rounded-full border-2 ${gameData.selectedAnimal && gameData.selectedAnimal.id === a.id ? 'border-amber-500 bg-white shadow-xl' : 'border-transparent bg-white/50'}">
+                        <div class="size-14 rounded-full bg-orange-50 flex items-center justify-center overflow-hidden"><img class="w-full h-full object-contain" src="${a.image}" style="mix-blend-mode: multiply;"></div>
+                    </div>
+                </div>`).join('');
+        }
+
+        function renderFoodRail() {
+            document.getElementById('food-rail').innerHTML = gameData.foods.map(f => {
+                const count = gameData.foodInventory[f.id] || 0;
+                return `<button onmousedown="startFoodDrag(event, ${f.id})" ontouchstart="startFoodDrag(event, ${f.id})" class="group relative flex flex-col items-center justify-center size-14 min-h-[56px] rounded-full ${count > 0 ? 'bg-white/80 text-primary' : 'bg-gray-200 text-gray-400'} shadow-md hover:scale-105 active:scale-95 transition-transform select-none">
+                        <span class="material-symbols-outlined text-[24px] pointer-events-none">${f.icon}</span>
+                        <span class="absolute -bottom-1 ${count > 0 ? 'bg-amber-500' : 'bg-gray-400'} text-white text-[10px] font-bold px-1.5 rounded-full z-10 pointer-events-none">${count}</span>
+                        <span class="absolute right-full mr-2 bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">${f.name}</span>
+                        </button>`;
+            }).join('');
+        }
+
+        let dragFoodId = null;
+        let dragGhost = null;
+        let dragStartX = 0, dragStartY = 0;
+
+        // Rotation Control
+        let isDraggingModel = false;
+        let previousMouseX = 0;
+        let dragStartXModel = 0;
+        let dragStartYModel = 0;
+
+        function onCanvasPointerDown(e) {
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            isDraggingModel = false;
+            previousMouseX = clientX;
+            dragStartXModel = clientX;
+            dragStartYModel = clientY;
+        }
+
+        function onCanvasPointerMove(e) {
+            if (!gameData.arObject) return;
+            if (!e.touches && e.buttons === 0) return;
+
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            // Check threshold to distinguish click vs drag
+            if (Math.abs(clientX - dragStartXModel) > 5 || Math.abs(clientY - dragStartYModel) > 5) {
+                isDraggingModel = true;
+            }
+
+            if (isDraggingModel) {
+                const delta = clientX - previousMouseX;
+                gameData.arObject.rotation.y += delta * 0.015;
+                e.preventDefault();
+            }
+            previousMouseX = clientX;
+        }
+
+        function startFoodDrag(e, id) {
+            const count = gameData.foodInventory[id] || 0;
+            if (count <= 0) { feedAnimal(id); return; }
+            dragFoodId = id;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            dragStartX = clientX; dragStartY = clientY;
+            const f = gameData.foods.find(x => x.id === id);
+            dragGhost = document.createElement('div');
+            dragGhost.innerHTML = f.icon;
+            dragGhost.className = 'fixed z-[100] material-symbols-outlined text-[40px] pointer-events-none drop-shadow-2xl transition-transform';
+            dragGhost.style.left = (clientX - 20) + 'px';
+            dragGhost.style.top = (clientY - 20) + 'px';
+            document.body.appendChild(dragGhost);
+            window.addEventListener('mousemove', onFoodDragMove);
+            window.addEventListener('touchmove', onFoodDragMove, { passive: false });
+            window.addEventListener('mouseup', onFoodDragEnd);
+            window.addEventListener('touchend', onFoodDragEnd);
+        }
+
+        function onFoodDragMove(e) {
+            if (!dragGhost) return;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            dragGhost.style.left = (clientX - 20) + 'px';
+            dragGhost.style.top = (clientY - 20) + 'px';
+            e.preventDefault();
+        }
+
+        function onFoodDragEnd(e) {
+            window.removeEventListener('mousemove', onFoodDragMove);
+            window.removeEventListener('touchmove', onFoodDragMove);
+            window.removeEventListener('mouseup', onFoodDragEnd);
+            window.removeEventListener('touchend', onFoodDragEnd);
+            if (dragGhost) { dragGhost.remove(); dragGhost = null; }
+            const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+            const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+            if (Math.abs(clientX - dragStartX) < 10 && Math.abs(clientY - dragStartY) < 10) { feedAnimal(dragFoodId); return; }
+            const w = window.innerWidth, h = window.innerHeight;
+            if (clientX > w * 0.2 && clientX < w * 0.8 && clientY > h * 0.2 && clientY < h * 0.8) { feedAnimal(dragFoodId); }
+        }
+
+        function selectAnimal(id) {
+            if (gameData.scene) {
+                if (gameData.arObject) { gameData.scene.remove(gameData.arObject); gameData.arObject = null; }
+                gameData.interactables.forEach(o => gameData.scene.remove(o));
+                gameData.interactables = [];
+                for (let i = gameData.scene.children.length - 1; i >= 0; i--) {
+                    const obj = gameData.scene.children[i];
+                    if (obj.type !== 'AmbientLight' && obj.type !== 'DirectionalLight') { gameData.scene.remove(obj); }
+                }
+                gameData.fedGems = [];
+                gameData.animals.forEach(a => { if (a.type === 'capybara') a.oranges = []; if (a.type === 'guineapig') a.carState = 0; });
+            }
+            gameData.selectedAnimal = gameData.animals.find(a => a.id === id);
+            updateUI(); notify(`選擇: ${gameData.selectedAnimal.name}`);
+            if (gameData.scene) loadAnimalModel(gameData.selectedAnimal);
+        }
+
+        function feedAnimal(id) {
+            if (!gameData.selectedAnimal) { notify('請先選擇動物!'); return; }
+            const food = gameData.foods.find(f => f.id === id);
+            const count = gameData.foodInventory[id] || 0;
+            if (count > 0) {
+                gameData.foodInventory[id]--; gameData.exp += 15; checkLevel(); updateUI(); notify(`餵食 ${food.name}! (+15 EXP)`);
+                if (food.gem) {
+                    gameData.fedGems.push(food.gem);
+                    if (gameData.fedGems.length >= 3) {
+                        const gemsToSpawn = [...gameData.fedGems];
+                        gameData.fedGems = [];
+                        setTimeout(() => {
+                            notify('💎 產出寶石!');
+                            gemsToSpawn.forEach((gemPath, index) => { spawnGemstone(gemPath, index); });
+                        }, 1500);
+                    }
+                }
+                // Removed jump animation ("gameData.arObject... j()") to prevent "當一下" (stutter/lag)
+                if (food.model) spawnFoodModel(food.model);
+            } else {
+                if (confirm(`${food.name} 不足! 購買 5 個 (花費 ${food.price})?`)) {
+                    if (gameData.silver >= food.price) { gameData.silver -= food.price; gameData.foodInventory[id] = (gameData.foodInventory[id] || 0) + 5; updateUI(); notify('購買成功!'); } else notify('銀幣不足!');
+                }
+            }
+        }
+
+        function spawnGemstone(path, offset) {
+            const loader = new THREE.FBXLoader();
+            loader.load(path, (fbx) => {
+                const box = new THREE.Box3().setFromObject(fbx);
+                const s = box.getSize(new THREE.Vector3());
+                const scale = 0.4 / Math.max(s.x, s.y, s.z);
+                fbx.scale.set(scale, scale, scale);
+
+                if (gameData.arObject) {
+                    fbx.position.copy(gameData.arObject.position);
+                    // Place primarily on the SIDES (left or right)
+                    const side = Math.random() > 0.5 ? 1 : -1;
+                    fbx.position.x += side * (1.2 + Math.random() * 0.8);
+                    fbx.position.y = -1.0; // Ground level
+                    fbx.position.z += (Math.random() - 0.5) * 1.0;
+                } else { fbx.position.set(0, -1, -3); }
+
+                // Face the camera (wide side forward) - Apply after position is set
+                if (gameData.camera) {
+                    fbx.lookAt(gameData.camera.position.x, fbx.position.y, gameData.camera.position.z);
+                    fbx.rotation.y += Math.PI / 2; // Corrective rotation for this model
+                }
+
+                fbx.userData.isCollectible = true;
+                fbx.userData.isGemstone = true; // Mark as non-cinnabar
+                gameData.scene.add(fbx);
+                gameData.interactables.push(fbx);
+            });
+        }
+
+        function checkLevel() { if (gameData.exp >= gameData.level * 100) { gameData.exp -= gameData.level * 100; gameData.level++; gameData.silver += 50; notify('升級!'); } }
+        function exchangeCinnabar() { if (gameData.warehouse.cinnabar >= 50) { gameData.warehouse.cinnabar -= 50; gameData.gold++; updateUI(); notify('兌換成功!'); } }
+
+        async function startCamera() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { initThree(); return; }
+            try {
+                const v = document.getElementById('cameraView');
+                const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                v.srcObject = s;
+                await v.play();
+                initThree();
+            } catch (e) { initThree(); }
+        }
+
+        function initThree() {
+            if (gameData.scene) return;
+            const cvs = document.getElementById('arCanvas');
+            gameData.scene = new THREE.Scene();
+            gameData.camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+            gameData.renderer = new THREE.WebGLRenderer({ canvas: cvs, alpha: true, antialias: true });
+            gameData.renderer.setSize(window.innerWidth, window.innerHeight);
+            gameData.scene.add(new THREE.AmbientLight(0xffffff, 1.2));
+            const dl = new THREE.DirectionalLight(0xffffff, 1.0); dl.position.set(0, 5, 5); gameData.scene.add(dl);
+            selectAnimal(1);
+            cvs.addEventListener('click', onCanvasClick);
+            cvs.addEventListener('mousedown', onCanvasPointerDown);
+            cvs.addEventListener('mousemove', onCanvasPointerMove);
+            cvs.addEventListener('touchstart', onCanvasPointerDown, { passive: false });
+            cvs.addEventListener('touchmove', onCanvasPointerMove, { passive: false });
+            animate();
+        }
+
+        function loadAnimalModel(animal) {
+            let p = (animal.type === 'chicken' && animal.isEgg) ? animal.eggPath : animal.path;
+            loadObj(p, (obj) => {
+                const box = new THREE.Box3().setFromObject(obj);
+                const s = box.getSize(new THREE.Vector3());
+                const c = box.getCenter(new THREE.Vector3());
+                const scale = 3.0 / Math.max(s.x, s.y, s.z);
+                obj.scale.set(scale, scale, scale);
+                obj.position.set(-c.x * scale, -c.y * scale, -c.z * scale);
+                obj.rotation.y = -Math.PI / 2;
+                const g = new THREE.Group();
+                g.add(obj);
+                g.position.set(0, 0.1, -5); // Overall position lowered
+                g.userData.animal = animal;
+                if (animal.type === 'meerkat') animal.hasHill = false;
+                gameData.scene.add(g);
+                gameData.arObject = g;
+            });
+        }
+
+        function spawnFoodModel(path) {
+            if (!path) return;
+            const loader = new THREE.FBXLoader();
+            loader.load(path, (fbx) => {
+                const box = new THREE.Box3().setFromObject(fbx); const s = box.getSize(new THREE.Vector3());
+                const scale = 0.5 / Math.max(s.x, s.y, s.z);
+                fbx.scale.set(scale, scale, scale); fbx.position.set(0, -1, -2);
+                gameData.scene.add(fbx);
+                const target = gameData.arObject ? gameData.arObject.position.clone() : new THREE.Vector3(0, 0, -5);
+                target.y += 0.5; // Aim lower (mouth height approx)
+                target.z += 1.0; // Stop slightly in front to avoid clipping (don't go too deep)
+                let p = 0;
+                const anim = () => {
+                    p += 0.010;
+                    fbx.position.lerp(target, 0.03);
+                    fbx.rotation.x += 0.05; fbx.rotation.y += 0.05;
+                    // Stop when close enough or time up
+                    if (p < 1 && fbx.position.distanceTo(target) > 0.5) requestAnimationFrame(anim);
+                    else { gameData.scene.remove(fbx); }
+                }; anim();
+            });
+        }
+
+        function loadObj(path, cb) {
+            const ls = path.lastIndexOf('/'), dir = path.substring(0, ls), file = path.substring(ls + 1);
+            const ep = dir.split('/').map(encodeURIComponent).join('/') + '/', ef = encodeURIComponent(file);
+            new THREE.MTLLoader().setPath(ep).load(ef + '.mtl', m => { m.preload(); new THREE.OBJLoader().setMaterials(m).setPath(ep).load(ef + '.obj', cb); });
+        }
+        function loadItem(key, cb) { loadObj(gameData.assets[key], cb); }
+
+        function onCanvasClick(e) {
+            if (isDraggingModel) return;
+            e.preventDefault();
+            const cvs = document.getElementById('arCanvas'), r = cvs.getBoundingClientRect();
+            let cx = e.clientX || (e.touches && e.touches[0].clientX), cy = e.clientY || (e.touches && e.touches[0].clientY);
+            if (cx === undefined) return;
+            gameData.mouse.x = ((cx - r.left) / r.width) * 2 - 1; gameData.mouse.y = -((cy - r.top) / r.height) * 2 + 1;
+            if (!gameData.scene) return;
+            gameData.raycaster.setFromCamera(gameData.mouse, gameData.camera);
+            if (gameData.interactables.length) {
+                const hits = gameData.raycaster.intersectObjects(gameData.interactables, true);
+                if (hits.length) {
+                    let t = hits[0].object; while (t.parent && !t.userData.isCollectible) t = t.parent;
+                    if (t.userData.isCollectible) {
+                        gameData.scene.remove(t);
+                        gameData.interactables = gameData.interactables.filter(i => i !== t);
+                        if (t.userData.isGemstone) {
+                            gameData.silver += 10;
+                            notify('獲得 10 銀幣!');
+                        } else {
+                            gameData.warehouse.cinnabar++;
+                            notify('獲得寶石!');
+                        }
+                        updateUI();
+                        return;
+                    }
+                }
+            }
+            if (gameData.arObject) {
+                const a = gameData.arObject.userData.animal;
+                if (a.type === 'chicken' && a.isEgg) { gameData.scene.remove(gameData.arObject); a.isEgg = false; loadAnimalModel(a); notify('孵化了!'); }
+                else if (a.type === 'capybara') {
+                    if (!a.oranges) a.oranges = [];
+                    if (a.oranges.length < 3) { loadItem('orange', (o) => { o.position.copy(gameData.arObject.position); o.position.y += 0.96 + a.oranges.length * 0.4; o.position.z += 0.8; o.scale.set(0.6, 0.6, 0.6); gameData.scene.add(o); a.oranges.push(o); notify('疊橘子!'); }); }
+                    else { a.oranges.forEach(o => gameData.scene.remove(o)); a.oranges = []; notify('重置!'); }
+                }
+                else if (a.type === 'guineapig') {
+                    if (!a.carState) { loadItem('car', (c) => { c.position.copy(gameData.arObject.position); c.scale.set(3.5, 3.5, 3.5); c.rotation.y = -Math.PI / 2; gameData.scene.remove(gameData.arObject); gameData.scene.add(c); gameData.arObject = c; c.userData.animal = a; a.carState = 1; notify('變身車車!'); }); }
+                    else { gameData.scene.remove(gameData.arObject); loadAnimalModel(a); a.carState = 0; }
+                }
+                else if (a.type === 'rabbit') {
+                    const h = new Date().getHours();
+                    if (h >= 20 || h < 2) {
+                        loadItem('cinnabar', (o) => { o.position.copy(gameData.arObject.position); o.position.x += 2; o.scale.set(0.8, 0.8, 0.8); o.userData.isCollectible = true; gameData.scene.add(o); gameData.interactables.push(o); notify('產出寶石了!'); });
+                    } else { notify('現在不是大軟便時間...'); }
+                }
+                else if (a.type === 'alpaca') {
+                    notify('羊駝吐口水...');
+                    loadItem('spit', (s) => {
+                        const texLoader = new THREE.TextureLoader();
+                        const metallicMap = texLoader.load('ALL/saliva/tripo_image_7d8bed4d-c702-4809-abf5-0a7900abd4c8_Metallic.jpg');
+                        const roughnessMap = texLoader.load('ALL/saliva/tripo_image_7d8bed4d-c702-4809-abf5-0a7900abd4c8_Roughness.jpg');
+                        s.traverse((child) => { if (child.isMesh) { child.material = new THREE.MeshStandardMaterial({ color: 0xddeeff, metalnessMap: metallicMap, roughnessMap: roughnessMap, metalness: 0.8, roughness: 0.2, transparent: true, opacity: 0.85 }); } });
+                        s.position.copy(gameData.arObject.position); s.position.x -= 1.0; s.position.y += 2.0; s.position.z += 0.6; s.scale.set(1.5, 1.5, 1.5);
+                        gameData.scene.add(s);
+                        let velY = 0.02; let velZ = 0.05; const groundY = -1.0;
+                        const anim = () => {
+                            s.position.z += velZ; s.position.y -= velY; velY += 0.01; s.rotation.x += 0.1;
+                            if (s.position.y > groundY) { requestAnimationFrame(anim); }
+                            else { s.position.y = groundY; s.rotation.set(0, 0, 0); s.scale.set(2.0, 0.1, 2.0); notify('吐在地上!'); setTimeout(() => gameData.scene.remove(s), 8000); }
+                        }; anim();
+                    });
+                }
+                else if (a.type === 'meerkat') {
+                    if (!a.hasHill) {
+                        loadObj(gameData.assets.hill, (hill) => {
+                            hill.scale.set(4, 4, 4); hill.position.set(0, -1.0, -6); hill.userData.isHill = true; gameData.scene.add(hill);
+                            gameData.arObject.position.y = 0.5; // Lift for guard mode remains same relative to ground
+                            gameData.arObject.position.z = -6; a.hasHill = true; a.hillObject = hill; notify('狐獴看守中!');
+                        });
+                    } else {
+                        if (a.hillObject) gameData.scene.remove(a.hillObject);
+                        gameData.arObject.position.set(0, 0.1, -5); a.hasHill = false; notify('解除看守');
+                    }
+                }
+            }
+        }
+        function animate() { requestAnimationFrame(animate); if (gameData.renderer) gameData.renderer.render(gameData.scene, gameData.camera); }
+        window.onload = () => { updateUI(); };
+    </script>
+</body>
+
+</html>
